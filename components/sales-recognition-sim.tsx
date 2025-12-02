@@ -1,35 +1,49 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState, useMemo } from "react"
-import { Plus, Trash2, Calculator, FileText, DollarSign, TrendingUp, BarChart3, Database } from "lucide-react"
+import type React from "react";
+import { useMemo, useState } from "react";
+import {
+  BarChart3,
+  Calculator,
+  Database,
+  DollarSign,
+  FileText,
+  Link as LinkIcon,
+  Plus,
+  Trash2,
+  TrendingUp,
+} from "lucide-react";
 
 // --- Types ---
 
 interface Application {
-  id: string
-  clientName: string // 受注先会社名
-  billingCompany: string // 請求先会社名
-  accountId: string // 運用アカウント
-  media: string // 媒体 (New)
-  startDate: string // 掲載開始日
-  endDate: string // 掲載終了日
-  budget: number // 運用金額 (媒体費予算)
-  adjustment: number // 調整額
+  id: string;
+  clientName: string; // 受注先会社名
+  billingCompany: string; // 請求先会社名
+  accountId: string; // 運用アカウント
+  media: string; // 媒体
+  startDate: string; // 掲載開始日
+  endDate: string; // 掲載終了日
+  budget: number; // 掲載費
+  adjustment: number; // 調整額
+  promotion: number; // プロモーション
+  compensation: number; // 補填金額
+  compensationType: "cost" | "commission"; // 補填種別
+  compensationUrl: string; // 補填申請URL
 }
 
 interface CommissionMaster {
-  id: string
-  accountId: string // 運用アカウント
-  media: string // 媒体
-  rate: number // 手数料率 (%)
+  id: string;
+  accountId: string; // 運用アカウント
+  media: string; // 媒体
+  rate: number; // 手数料率 (%)
 }
 
 interface BillingData {
-  id: string
-  month: string // 対象月
-  accountId: string // 運用アカウント
-  spendAmount: number // 費消額
+  id: string;
+  month: string; // 対象月
+  accountId: string; // 運用アカウント
+  spendAmount: number; // 費消額
 }
 
 // --- Initial Data (Mock) ---
@@ -45,57 +59,21 @@ const initialApplications: Application[] = [
     endDate: "2024-03-31",
     budget: 1000000,
     adjustment: 50000,
+    promotion: 0,
+    compensation: 0,
+    compensationType: "cost",
+    compensationUrl: "",
   },
-  {
-    id: "2",
-    clientName: "株式会社B",
-    billingCompany: "ホールディングスB",
-    accountId: "ACC-002",
-    media: "Yahoo",
-    startDate: "2023-11-01",
-    endDate: "2023-12-31",
-    budget: 500000,
-    adjustment: 0,
-  },
-  {
-    id: "3",
-    clientName: "株式会社C",
-    billingCompany: "ホールディングスB",
-    accountId: "ACC-003",
-    media: "Meta",
-    startDate: "2023-10-15",
-    endDate: "2024-01-31",
-    budget: 2000000,
-    adjustment: 10000,
-  },
-]
+];
 
-const initialMasters: CommissionMaster[] = [
-  { id: "m1", accountId: "ACC-001", media: "Google", rate: 20 },
-  { id: "m2", accountId: "ACC-002", media: "Yahoo", rate: 15 },
-  { id: "m3", accountId: "ACC-003", media: "Meta", rate: 20 },
-]
+const initialMasters: CommissionMaster[] = [{ id: "m1", accountId: "ACC-001", media: "Google", rate: 20 }];
 
 const initialBillingData: BillingData[] = [
   { id: "b1", month: "2023-10", accountId: "ACC-001", spendAmount: 150000 },
   { id: "b2", month: "2023-11", accountId: "ACC-001", spendAmount: 200000 },
-  { id: "b3", month: "2023-11", accountId: "ACC-002", spendAmount: 100000 },
-  { id: "b4", month: "2023-10", accountId: "ACC-003", spendAmount: 500000 },
-  { id: "b5", month: "2023-11", accountId: "ACC-003", spendAmount: 800000 },
-]
+];
 
-const MEDIA_OPTIONS = [
-  "Google",
-  "Yahoo",
-  "Meta",
-  "LINE",
-  "TikTok",
-  "X (Twitter)",
-  "Indeed",
-  "求人ボックス",
-  "スタンバイ",
-  "Other",
-]
+const MEDIA_OPTIONS = ["Google", "Yahoo", "Meta", "LINE", "TikTok", "X (Twitter)", "Indeed", "求人ボックス", "スタンバイ", "Other"];
 
 // --- Utility Components ---
 
@@ -105,16 +83,16 @@ const NumberInput = ({
   className,
   placeholder,
 }: { value: number; onChange: (val: number) => void; className?: string; placeholder?: string }) => {
-  const [isFocused, setIsFocused] = useState(false)
+  const [isFocused, setIsFocused] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value.replace(/,/g, "")
+    const rawValue = e.target.value.replace(/,/g, "");
     if (rawValue === "" || /^-?\d*\.?\d*$/.test(rawValue)) {
-      onChange(Number(rawValue))
+      onChange(Number(rawValue));
     }
-  }
+  };
 
-  const displayValue = isFocused ? (value === 0 ? "" : value) : value.toLocaleString()
+  const displayValue = isFocused ? (value === 0 ? "" : value) : value.toLocaleString();
 
   return (
     <input
@@ -126,14 +104,14 @@ const NumberInput = ({
       className={className}
       placeholder={placeholder}
     />
-  )
-}
+  );
+};
 
 export default function SalesRecognitionSim() {
-  const [activeTab, setActiveTab] = useState<"applications" | "master" | "billing" | "report">("report")
-  const [applications, setApplications] = useState<Application[]>(initialApplications)
-  const [masters, setMasters] = useState<CommissionMaster[]>(initialMasters)
-  const [billings, setBillings] = useState<BillingData[]>(initialBillingData)
+  const [activeTab, setActiveTab] = useState<"applications" | "master" | "billing" | "report">("report");
+  const [applications, setApplications] = useState<Application[]>(initialApplications);
+  const [masters, setMasters] = useState<CommissionMaster[]>(initialMasters);
+  const [billings, setBillings] = useState<BillingData[]>(initialBillingData);
 
   // --- Actions ---
 
@@ -149,17 +127,21 @@ export default function SalesRecognitionSim() {
       endDate: "",
       budget: 0,
       adjustment: 0,
-    }
-    setApplications([...applications, newApp])
-  }
+      promotion: 0,
+      compensation: 0,
+      compensationType: "cost",
+      compensationUrl: "",
+    };
+    setApplications([...applications, newApp]);
+  };
 
   const updateApplication = (id: string, field: keyof Application, value: any) => {
-    setApplications((apps) => apps.map((app) => (app.id === id ? { ...app, [field]: value } : app)))
-  }
+    setApplications((apps) => apps.map((app) => (app.id === id ? { ...app, [field]: value } : app)));
+  };
 
   const deleteApplication = (id: string) => {
-    setApplications((apps) => apps.filter((app) => app.id !== id))
-  }
+    setApplications((apps) => apps.filter((app) => app.id !== id));
+  };
 
   // Masters
   const addMaster = () => {
@@ -168,17 +150,17 @@ export default function SalesRecognitionSim() {
       accountId: "",
       media: "Google",
       rate: 20,
-    }
-    setMasters([...masters, newMaster])
-  }
+    };
+    setMasters([...masters, newMaster]);
+  };
 
   const updateMaster = (id: string, field: keyof CommissionMaster, value: any) => {
-    setMasters((data) => data.map((m) => (m.id === id ? { ...m, [field]: value } : m)))
-  }
+    setMasters((data) => data.map((m) => (m.id === id ? { ...m, [field]: value } : m)));
+  };
 
   const deleteMaster = (id: string) => {
-    setMasters((data) => data.filter((m) => m.id !== id))
-  }
+    setMasters((data) => data.filter((m) => m.id !== id));
+  };
 
   // Billings
   const addBilling = () => {
@@ -187,62 +169,89 @@ export default function SalesRecognitionSim() {
       month: new Date().toISOString().slice(0, 7),
       accountId: "",
       spendAmount: 0,
-    }
-    setBillings([...billings, newBilling])
-  }
+    };
+    setBillings([...billings, newBilling]);
+  };
 
   const updateBilling = (id: string, field: keyof BillingData, value: any) => {
-    setBillings((data) => data.map((b) => (b.id === id ? { ...b, [field]: value } : b)))
-  }
+    setBillings((data) => data.map((b) => (b.id === id ? { ...b, [field]: value } : b)));
+  };
 
   const deleteBilling = (id: string) => {
-    setBillings((data) => data.filter((b) => b.id !== id))
-  }
+    setBillings((data) => data.filter((b) => b.id !== id));
+  };
 
   // --- Calculation Logic (Core Engine) ---
 
   // Helper: マスタからレートを取得
   const getCommissionRate = (accountId: string, media: string) => {
-    const match = masters.find((m) => m.accountId === accountId && m.media === media)
-    return match ? match.rate : 0
-  }
+    const match = masters.find((m) => m.accountId === accountId && m.media === media);
+    return match ? match.rate : 0;
+  };
 
   const revenueReport = useMemo(() => {
-    const allMonths = Array.from(new Set(billings.map((b) => b.month))).sort()
-    const groupedData: Record<string, any> = {}
+    const allMonths = Array.from(new Set(billings.map((b) => b.month))).sort();
+    const groupedData: Record<string, any> = {};
 
     billings.forEach((bill) => {
-      const app = applications.find((a) => a.accountId === bill.accountId)
-      if (!app) return
+      const app = applications.find((a) => a.accountId === bill.accountId);
+      if (!app) return;
 
-      const billingCompany = app.billingCompany || "(不明な請求先)"
+      const billingCompany = app.billingCompany || "(不明な請求先)";
 
       if (!groupedData[billingCompany]) {
         groupedData[billingCompany] = {
           name: billingCompany,
           details: [],
           monthlyTotals: {},
-        }
-        allMonths.forEach((m) => (groupedData[billingCompany].monthlyTotals[m] = 0))
+        };
+        allMonths.forEach((m) => (groupedData[billingCompany].monthlyTotals[m] = 0));
       }
 
-      // マスタからレートを取得 (Account x Media)
-      const rate = getCommissionRate(app.accountId, app.media)
-      const commission = Math.floor(bill.spendAmount * (rate / 100))
+      // マスタからレートを取得
+      const rate = getCommissionRate(app.accountId, app.media);
 
-      // 調整額のロジック
-      const accountBillings = billings.filter((b) => b.accountId === bill.accountId)
-      const firstMonth = accountBillings.map((b) => b.month).sort()[0]
+      // 初回計上月判定 (プロモ・補填・調整額は初回のみ適用とする)
+      const accountBillings = billings.filter((b) => b.accountId === bill.accountId);
+      const firstMonth = accountBillings.map((b) => b.month).sort()[0];
+      const isFirstMonth = bill.month === firstMonth;
 
-      let monthlyRevenue = bill.spendAmount + commission
-      let appliedAdjustment = 0
+      const promoVal = isFirstMonth ? app.promotion || 0 : 0;
+      const compVal = isFirstMonth ? app.compensation || 0 : 0;
+      const adjVal = isFirstMonth ? app.adjustment || 0 : 0;
 
-      if (bill.month === firstMonth) {
-        monthlyRevenue += app.adjustment
-        appliedAdjustment = app.adjustment
+      // --- 計算ロジック ---
+
+      // 基本: (費消額 - プロモ)
+      // ※プロモが費消より大きい場合もそのまま計算する（マイナス許容）
+      let baseSpend = bill.spendAmount - promoVal;
+
+      // 売上計上額
+      let monthlyRevenue = 0;
+      let commission = 0;
+
+      if (app.compensationType === "cost") {
+        // パターンB: 補填対象が費消の場合
+        // 売上 = (費消 - プロモ - 補填) + ((費消 - プロモ - 補填) * Rate) + 調整
+        const adjustedSpend = baseSpend - compVal;
+        commission = Math.floor(adjustedSpend * (rate / 100));
+        monthlyRevenue = adjustedSpend + commission + adjVal;
+      } else if (app.compensationType === "commission") {
+        // パターンC: 補填対象が代行費の場合
+        // 売上 = (費消 - プロモ) + ((費消 - プロモ) * Rate - 補填) + 調整
+        // ※ここで (費消 - プロモ) 自体は売上の「媒体費相当分」として計上される前提
+        const rawCommission = Math.floor(baseSpend * (rate / 100));
+        commission = rawCommission - compVal;
+        monthlyRevenue = baseSpend + commission + adjVal;
+      } else {
+        // パターンA: 補填なし（または未定義）
+        // 売上 = (費消 - プロモ) + ((費消 - プロモ) * Rate) + 調整
+        // ※ compVal が 0 であれば パターンC と計算結果は同じだがロジックとして分ける
+        commission = Math.floor(baseSpend * (rate / 100));
+        monthlyRevenue = baseSpend + commission + adjVal;
       }
 
-      groupedData[billingCompany].monthlyTotals[bill.month] += monthlyRevenue
+      groupedData[billingCompany].monthlyTotals[bill.month] += monthlyRevenue;
 
       groupedData[billingCompany].details.push({
         month: bill.month,
@@ -250,18 +259,20 @@ export default function SalesRecognitionSim() {
         media: app.media,
         spend: bill.spendAmount,
         rate: rate,
-        commission: commission,
-        adjustment: appliedAdjustment,
+        commission: commission, // 計算後の代行費（補填反映済み）
+        adjustment: adjVal,
+        promotion: promoVal,
+        compensation: compVal,
+        compensationType: app.compensationType,
         totalRevenue: monthlyRevenue,
-      })
-    })
+      });
+    });
 
-    return { allMonths, groupedData }
-  }, [applications, billings, masters])
+    return { allMonths, groupedData };
+  }, [applications, billings, masters]);
 
   // --- Formatters ---
-  const fmtCurrency = (num: number) =>
-    new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" }).format(num)
+  const fmtCurrency = (num: number) => new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" }).format(num);
 
   // --- Components ---
 
@@ -320,17 +331,14 @@ export default function SalesRecognitionSim() {
                 <FileText className="text-blue-600" />
                 申込書情報一覧
               </h2>
-              <button
-                onClick={addApplication}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2 text-sm"
-              >
+              <button onClick={addApplication} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2 text-sm">
                 <Plus size={16} /> 新規申込書
               </button>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto pb-20">
               <table className="w-full text-sm text-left">
-                <thead className="bg-gray-100 text-gray-600 uppercase">
+                <thead className="bg-gray-100 text-gray-600 uppercase whitespace-nowrap">
                   <tr>
                     <th className="p-3 w-10"></th>
                     <th className="p-3">
@@ -341,23 +349,50 @@ export default function SalesRecognitionSim() {
                     </th>
                     <th className="p-3">受注先 / 請求先</th>
                     <th className="p-3">期間</th>
-                    <th className="p-3 text-right">運用予算</th>
-                    <th className="p-3 text-right text-gray-500">適用レート(参考)</th>
-                    <th className="p-3 text-right">調整額</th>
+                    <th className="p-3 text-right">掲載費</th>
+                    <th className="p-3 text-right text-gray-500">
+                      運用
+                      <br />
+                      代行費率
+                    </th>
+                    <th className="p-3 text-right bg-gray-50">
+                      運用代行費
+                      <br />
+                      <span className="text-[10px] font-normal">(掲載費×率)</span>
+                    </th>
+                    <th className="p-3 text-right w-24">調整額</th>
+                    <th className="p-3 text-right w-24">プロモ</th>
+                    <th className="p-3 w-40">補填 (金額/種別/URL)</th>
+                    <th className="p-3 text-right bg-blue-50 text-blue-800">
+                      運用金額
+                      <br />
+                      <span className="text-[10px] font-normal">(掲載費+プロモ)</span>
+                    </th>
+                    <th className="p-3 text-right bg-green-50 text-green-800">
+                      合計金額
+                      <br />
+                      <span className="text-[10px] font-normal">(掲載+代行+調整+補填)</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {applications.map((app) => {
-                    const currentRate = getCommissionRate(app.accountId, app.media)
-                    const masterExists = currentRate > 0
+                    const currentRate = getCommissionRate(app.accountId, app.media);
+                    const masterExists = currentRate > 0;
+
+                    // 運用代行費 (予算ベース): 掲載費 * 率
+                    const estimatedCommission = Math.floor(app.budget * (currentRate / 100));
+
+                    // 運用金額: 掲載費 + プロモ
+                    const operationalAmount = app.budget + app.promotion;
+
+                    // 合計金額: 掲載費 + 運用代行費 + 調整額 + 補填
+                    const totalAmount = app.budget + estimatedCommission + app.adjustment + app.compensation;
 
                     return (
-                      <tr key={app.id} className="hover:bg-gray-50 group">
+                      <tr key={app.id} className="hover:bg-gray-50 group align-top">
                         <td className="p-3">
-                          <button
-                            onClick={() => deleteApplication(app.id)}
-                            className="text-gray-400 hover:text-red-500"
-                          >
+                          <button onClick={() => deleteApplication(app.id)} className="text-gray-400 hover:text-red-500 pt-1">
                             <Trash2 size={16} />
                           </button>
                         </td>
@@ -374,7 +409,7 @@ export default function SalesRecognitionSim() {
                           <select
                             value={app.media}
                             onChange={(e) => updateApplication(app.id, "media", e.target.value)}
-                            className="w-full p-1 border rounded"
+                            className="w-32 min-w-[140px] p-1 border rounded"
                           >
                             {MEDIA_OPTIONS.map((opt) => (
                               <option key={opt} value={opt}>
@@ -424,30 +459,71 @@ export default function SalesRecognitionSim() {
                             value={app.budget}
                             onChange={(val) => updateApplication(app.id, "budget", val)}
                             className="w-24 p-1 border rounded text-right"
+                            placeholder="掲載費"
                           />
                         </td>
-                        <td className="p-3 text-right">
-                          {masterExists ? (
-                            <span className="text-gray-600 font-mono">{currentRate}%</span>
-                          ) : (
-                            <span className="text-red-500 text-xs font-bold">マスタ未設定</span>
-                          )}
+                        <td className="p-3 text-right pt-2">
+                          {masterExists ? <span className="text-gray-600 font-mono">{currentRate}%</span> : <span className="text-red-500 text-xs font-bold">マスタ未設定</span>}
                         </td>
+                        {/* 運用代行費 (新規列) */}
+                        <td className="p-3 text-right bg-gray-50 font-mono font-medium">{fmtCurrency(estimatedCommission)}</td>
                         <td className="p-3 text-right">
                           <NumberInput
                             value={app.adjustment}
                             onChange={(val) => updateApplication(app.id, "adjustment", val)}
                             className="w-24 p-1 border rounded text-right"
+                            placeholder="調整額"
                           />
                         </td>
+                        <td className="p-3 text-right">
+                          <NumberInput
+                            value={app.promotion}
+                            onChange={(val) => updateApplication(app.id, "promotion", val)}
+                            className="w-24 p-1 border rounded text-right"
+                            placeholder="プロモ"
+                          />
+                        </td>
+                        <td className="p-3">
+                          <div className="space-y-1 w-40">
+                            <div className="flex gap-1">
+                              <NumberInput
+                                value={app.compensation}
+                                onChange={(val) => updateApplication(app.id, "compensation", val)}
+                                className="w-full p-1 border rounded text-right text-xs"
+                                placeholder="補填額"
+                              />
+                            </div>
+                            <select value={app.compensationType} onChange={(e) => updateApplication(app.id, "compensationType", e.target.value)} className="w-full p-1 border rounded text-xs">
+                              <option value="cost">補填種別: 費消</option>
+                              <option value="commission">補填種別: 代行費</option>
+                            </select>
+                            <div className="flex items-center gap-1">
+                              <LinkIcon size={12} className="text-gray-400" />
+                              <input
+                                type="text"
+                                value={app.compensationUrl}
+                                onChange={(e) => updateApplication(app.id, "compensationUrl", e.target.value)}
+                                className="w-full p-1 border rounded text-xs"
+                                placeholder="補填申請URL"
+                              />
+                            </div>
+                          </div>
+                        </td>
+                        {/* 運用金額 (掲載費 + プロモ) */}
+                        <td className="p-3 text-right bg-blue-50/30 font-bold text-blue-700 font-mono">{fmtCurrency(operationalAmount)}</td>
+                        {/* 合計金額 */}
+                        <td className="p-3 text-right bg-green-50/30 font-bold text-green-700 font-mono">{fmtCurrency(totalAmount)}</td>
                       </tr>
-                    )
+                    );
                   })}
                 </tbody>
               </table>
               <div className="p-4 text-xs text-gray-500 bg-gray-50 rounded-b mt-2">
-                ※ 適用レートは「運用アカウント」と「媒体」の組み合わせで「手数料率マスタ」から自動参照されます。
-                <br />※ レートが表示されない場合は、マスタ設定をご確認ください。
+                ※ 運用代行費 ＝ 掲載費 × 運用代行費率
+                <br />
+                ※ 運用金額 = 掲載費 + プロモ
+                <br />
+                ※ 合計金額 ＝ 掲載費 + 運用代行費 + 調整額 + 補填
               </div>
             </div>
           </div>
@@ -461,10 +537,7 @@ export default function SalesRecognitionSim() {
                 <Database className="text-purple-600" />
                 手数料率マスタ設定
               </h2>
-              <button
-                onClick={addMaster}
-                className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 flex items-center gap-2 text-sm"
-              >
+              <button onClick={addMaster} className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 flex items-center gap-2 text-sm">
                 <Plus size={16} /> 設定追加
               </button>
             </div>
@@ -498,11 +571,7 @@ export default function SalesRecognitionSim() {
                           />
                         </td>
                         <td className="p-3">
-                          <select
-                            value={m.media}
-                            onChange={(e) => updateMaster(m.id, "media", e.target.value)}
-                            className="w-full p-1 border rounded"
-                          >
+                          <select value={m.media} onChange={(e) => updateMaster(m.id, "media", e.target.value)} className="w-full p-1 border rounded">
                             {MEDIA_OPTIONS.map((opt) => (
                               <option key={opt} value={opt}>
                                 {opt}
@@ -538,7 +607,8 @@ export default function SalesRecognitionSim() {
                   <br />
                   ACC-001 (Yahoo) : 15%
                   <br />
-                  <br />※ 同じアカウントIDでも媒体が異なれば別の行として登録してください。
+                  <br />
+                  ※ 同じアカウントIDでも媒体が異なれば別の行として登録してください。
                 </div>
               </div>
             </div>
@@ -553,10 +623,7 @@ export default function SalesRecognitionSim() {
                 <DollarSign className="text-green-600" />
                 月次請求データ (媒体費消額)
               </h2>
-              <button
-                onClick={addBilling}
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center gap-2 text-sm"
-              >
+              <button onClick={addBilling} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center gap-2 text-sm">
                 <Plus size={16} /> データ追加
               </button>
             </div>
@@ -575,9 +642,11 @@ export default function SalesRecognitionSim() {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {billings.map((bill) => {
-                      const app = applications.find((a) => a.accountId === bill.accountId)
-                      const rate = app ? getCommissionRate(app.accountId, app.media) : 0
-                      const estimatedComm = Math.floor(bill.spendAmount * (rate / 100))
+                      const app = applications.find((a) => a.accountId === bill.accountId);
+                      const rate = app ? getCommissionRate(app.accountId, app.media) : 0;
+
+                      // 簡易表示用：補填ロジック等は複雑なためここでは単純計算のみ表示し、詳細はレポートで確認させる
+                      const estimatedComm = Math.floor(bill.spendAmount * (rate / 100));
 
                       return (
                         <tr key={bill.id} className="hover:bg-gray-50">
@@ -605,17 +674,13 @@ export default function SalesRecognitionSim() {
                             {!app && <div className="text-xs text-red-500 mt-1">※申込書未登録</div>}
                           </td>
                           <td className="p-3 text-right">
-                            <NumberInput
-                              value={bill.spendAmount}
-                              onChange={(val) => updateBilling(bill.id, "spendAmount", val)}
-                              className="w-32 p-1 border rounded text-right font-mono"
-                            />
+                            <NumberInput value={bill.spendAmount} onChange={(val) => updateBilling(bill.id, "spendAmount", val)} className="w-32 p-1 border rounded text-right font-mono" />
                           </td>
                           <td className="p-3 text-right text-gray-400 font-mono">
                             {fmtCurrency(estimatedComm)} <span className="text-[10px]">({rate}%)</span>
                           </td>
                         </tr>
-                      )
+                      );
                     })}
                   </tbody>
                 </table>
@@ -641,9 +706,7 @@ export default function SalesRecognitionSim() {
                     </div>
                     <div className="flex justify-between mt-2">
                       <span>費消額合計:</span>
-                      <span className="font-bold">
-                        {fmtCurrency(billings.reduce((sum, b) => sum + b.spendAmount, 0))}
-                      </span>
+                      <span className="font-bold">{fmtCurrency(billings.reduce((sum, b) => sum + b.spendAmount, 0))}</span>
                     </div>
                   </div>
                 </div>
@@ -661,9 +724,9 @@ export default function SalesRecognitionSim() {
                   <TrendingUp className="text-blue-600" />
                   売上計上レポート (請求先法人別)
                 </h2>
-                <div className="text-sm text-gray-500">
-                  <span className="font-mono bg-blue-100 text-blue-800 px-2 py-1 rounded mr-2">計算式</span>
-                  費消額 + (費消額 × マスタレート) + 調整額 = 売上
+                <div className="text-sm text-gray-500 text-right">
+                  <div className="text-xs text-gray-400 mb-1">※プロモ・補填・調整額は各アカウントの初回計上月のみ適用</div>
+                  <span className="font-mono bg-blue-100 text-blue-800 px-2 py-1 rounded">計算式</span> (費消 - プロモ) + 代行費(補填考慮) + 調整額 = 売上
                 </div>
               </div>
 
@@ -682,15 +745,15 @@ export default function SalesRecognitionSim() {
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
                     {Object.values(revenueReport.groupedData).map((group: any) => {
-                      const rowTotal = Object.values(group.monthlyTotals).reduce((a: any, b: any) => a + b, 0) as number
+                      const rowTotal = Object.values(group.monthlyTotals).reduce((a: any, b: any) => a + b, 0) as number;
 
                       return (
                         <tr key={group.name} className="hover:bg-gray-50 transition-colors">
                           <td className="p-4 font-bold text-gray-800 border-r">{group.name}</td>
                           {revenueReport.allMonths.map((month) => (
                             <td key={month} className="p-4 text-right border-r font-mono">
-                              {group.monthlyTotals[month] > 0 ? (
-                                <span className="text-blue-700 font-medium">
+                              {group.monthlyTotals[month] !== 0 ? (
+                                <span className={group.monthlyTotals[month] < 0 ? "text-red-600 font-medium" : "text-blue-700 font-medium"}>
                                   {fmtCurrency(group.monthlyTotals[month])}
                                 </span>
                               ) : (
@@ -698,35 +761,24 @@ export default function SalesRecognitionSim() {
                               )}
                             </td>
                           ))}
-                          <td className="p-4 text-right font-bold bg-gray-50 font-mono text-gray-900">
-                            {fmtCurrency(rowTotal)}
-                          </td>
+                          <td className="p-4 text-right font-bold bg-gray-50 font-mono text-gray-900">{fmtCurrency(rowTotal)}</td>
                         </tr>
-                      )
+                      );
                     })}
                   </tbody>
                   <tfoot className="bg-gray-800 text-white font-bold">
                     <tr>
                       <td className="p-4 text-right">月別総合計</td>
                       {revenueReport.allMonths.map((month) => {
-                        const monthTotal = Object.values(revenueReport.groupedData).reduce(
-                          (sum: number, group: any) => sum + (group.monthlyTotals[month] || 0),
-                          0,
-                        )
+                        const monthTotal = Object.values(revenueReport.groupedData).reduce((sum: number, group: any) => sum + (group.monthlyTotals[month] || 0), 0);
                         return (
                           <td key={month} className="p-4 text-right font-mono">
                             {fmtCurrency(monthTotal)}
                           </td>
-                        )
+                        );
                       })}
                       <td className="p-4 text-right font-mono text-yellow-400">
-                        {fmtCurrency(
-                          Object.values(revenueReport.groupedData).reduce(
-                            (total: number, group: any) =>
-                              total + Object.values(group.monthlyTotals).reduce((mSum: any, val: any) => mSum + val, 0),
-                            0,
-                          ),
-                        )}
+                        {fmtCurrency(Object.values(revenueReport.groupedData).reduce((total: number, group: any) => total + Object.values(group.monthlyTotals).reduce((mSum: any, val: any) => mSum + val, 0), 0))}
                       </td>
                     </tr>
                   </tfoot>
@@ -745,8 +797,10 @@ export default function SalesRecognitionSim() {
                       <th className="p-2 text-left">請求先</th>
                       <th className="p-2 text-left">アカウント (媒体)</th>
                       <th className="p-2 text-right">費消額</th>
+                      <th className="p-2 text-right">プロモ</th>
                       <th className="p-2 text-right">マスタレート</th>
-                      <th className="p-2 text-right">手数料</th>
+                      <th className="p-2 text-right">手数料(代行費)</th>
+                      <th className="p-2 text-right">補填</th>
                       <th className="p-2 text-right">調整額</th>
                       <th className="p-2 text-right">売上計上額</th>
                     </tr>
@@ -760,9 +814,7 @@ export default function SalesRecognitionSim() {
                           <td className="p-2">
                             {
                               revenueReport.groupedData[
-                                Object.keys(revenueReport.groupedData).find((k) =>
-                                  revenueReport.groupedData[k].details.includes(d),
-                                )!
+                                Object.keys(revenueReport.groupedData).find((k) => revenueReport.groupedData[k].details.includes(d))!
                               ].name
                             }
                           </td>
@@ -770,11 +822,13 @@ export default function SalesRecognitionSim() {
                             {d.account} <span className="bg-gray-100 px-1 rounded ml-1">{d.media}</span>
                           </td>
                           <td className="p-2 text-right font-mono">{fmtCurrency(d.spend)}</td>
+                          <td className="p-2 text-right font-mono text-red-400">{d.promotion > 0 ? `-${fmtCurrency(d.promotion)}` : "-"}</td>
                           <td className="p-2 text-right font-mono text-gray-600">{d.rate}%</td>
                           <td className="p-2 text-right font-mono text-green-600">{fmtCurrency(d.commission)}</td>
-                          <td className="p-2 text-right font-mono text-orange-600">
-                            {d.adjustment > 0 ? `+${fmtCurrency(d.adjustment)}` : "-"}
+                          <td className="p-2 text-right font-mono text-red-500">
+                            {d.compensation > 0 ? `-${fmtCurrency(d.compensation)} (${d.compensationType === "cost" ? "費消" : "代行"})` : "-"}
                           </td>
+                          <td className="p-2 text-right font-mono text-orange-600">{d.adjustment !== 0 ? fmtCurrency(d.adjustment) : "-"}</td>
                           <td className="p-2 text-right font-mono font-bold">{fmtCurrency(d.totalRevenue)}</td>
                         </tr>
                       ))}
@@ -786,5 +840,5 @@ export default function SalesRecognitionSim() {
         )}
       </main>
     </div>
-  )
+  );
 }
